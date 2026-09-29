@@ -1,48 +1,94 @@
-from __future__ import annotations
+# Music Video Agent 2.0
 
-import argparse
-import os
-import sys
-from pathlib import Path
+A refined music video generation pipeline designed to build beat-synced visuals from a song using multiple specialized agents.
 
-from src.music_video_agent.orchestrator import Orchestrator
+This version introduces:
+- scene segmentation by musical sections
+- richer visual transitions and dynamic palettes
+- avatar motion synchronized to beat intensity
+- subtitle generation with cinematic overlays
+- preset-based exports for cinematic, vertical, square, and story formats
 
+## Architecture
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate a beat-synced music video from a song.")
-    parser.add_argument("--song", type=str, help="Path to the local audio file.")
-    parser.add_argument("--song-url", type=str, help="URL to the audio file.")
-    parser.add_argument("--avatar", type=str, help="Optional avatar image path.")
-    parser.add_argument("--output", type=str, default="output/music_video.mp4", help="Output MP4 path.")
-    parser.add_argument("--fps", type=int, default=30, help="Frames per second for the final render.")
-    parser.add_argument("--width", type=int, default=1280, help="Output video width.")
-    parser.add_argument("--height", type=int, default=720, help="Output video height.")
-    return parser.parse_args()
+- Audio Agent: analyzes tempo, beats, onset energy and section structure
+- Scene Agent: maps each song section to a visual style and transition
+- Lyric Agent: builds subtitle timeline markers
+- Motion Agent: computes avatar positions and pose changes based on beats and intensity
+- Preset Agent: resolves output presets for different aspect ratios
+- Render Agent: composes frames and exports the final MP4
+- Orchestrator: coordinates the whole pipeline
 
+## Quick start
 
-def main() -> int:
-    args = parse_args()
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python main.py --song path/to/song.mp3 --output output/final_video.mp4 --preset cinematic
+```
 
-    if not args.song and not args.song_url:
-        print("You must provide either --song or --song-url.")
-        return 1
+Optional avatar:
 
-    output_path = Path(args.output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+```bash
+python main.py --song path/to/song.mp3 --avatar path/to/avatar.png --output output/final_video.mp4 --preset vertical
+```
 
-    orchestrator = Orchestrator()
-    orchestrator.run(
-        song_path=args.song,
-        song_url=args.song_url,
-        avatar_path=args.avatar,
-        output_path=str(output_path),
-        fps=args.fps,
-        width=args.width,
-        height=args.height,
-    )
-    print(f"Video created at: {output_path}")
-    return 0
+## Available presets
 
+- cinematic
+- vertical
+- square
+- story
 
-if __name__ == "__main__":
-    sys.exit(main())
+## Example roadmap
+
+```text
+Song input
+  ↓
+Audio analysis (BPM, beat grid, intensity)
+  ↓
+Scene planning (intro, verse, chorus, bridge, outro)
+  ↓
+Motion planning (avatar + effects + camera movement)
+  ↓
+Subtitle timeline
+  ↓
+Rendered MP4 export
+```
+
+## Notes
+
+This project remains a generator framework, but the 2.0 version is much closer to a real music video pipeline than the MVP. It is suitable as a foundation for production upgrades like AI-generated backgrounds, lip-sync animation, or cloud rendering.
+
+## Future enhancements
+
+- AI avatar generation / synthetic performers
+- advanced lyric alignment from actual lyrics
+- cinematic camera systems
+- lip-sync + mouth motion
+- multi-scene template libraries
+- adaptive transitions from drop detection
+- parallel rendering tasks for faster exports
+
+## Project structure
+
+```text
+music-video-agent/
+├── README.md
+├── requirements.txt
+├── main.py
+└── src/
+    └── music_video_agent/
+        ├── __init__.py
+        ├── orchestrator.py
+        └── agents/
+            ├── __init__.py
+            ├── audio_agent.py
+            ├── scene_agent.py
+            ├── lyric_agent.py
+            ├── motion_agent.py
+            ├── preset_agent.py
+            └── render_agent.py
+```
+

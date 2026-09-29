@@ -1,74 +1,35 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
-from typing import Optional
+import math
+from typing import List
 
-import cv2
 import numpy as np
-
-from .audio_agent import AudioAnalysis
-from .visual_agent import VisualAgent
+import cv2
 
 
-class RenderAgent:
-    def __init__(self) -> None:
-        pass
+class VisualAgent:
+    def __init__(self, width: int = 1280, height: int = 720) -> None:
+        self.width = width
+        self.height = height
 
-    def render(
-        self,
-        song_path: str,
-        audio_analysis: AudioAnalysis,
-        output_path: str,
-        avatar_path: Optional[str] = None,
-        fps: int = 30,
-        width: int = 1280,
-        height: int = 720,
-    ) -> str:
-        output = Path(output_path)
-        output.parent.mkdir(parents=True, exist_ok=True)
+    def draw_background(self, frame: np.ndarray, palette: List[int], t: float, beat_strength: float) -> np.ndarray:
+        for y in range(0, self.height, 6):
+            wave = 20 * math.sin((y / 40.0) + t * 2.5)
+            color = np.clip(np.array(palette, dtype=float) + wave, 0, 255).astype(np.uint8)
+            frame[y : y + 6, :] = color
+        if beat_strength > 0.1:
+            cv2.circle(frame, (self.width // 2, self.height // 2), int(80 + beat_strength * 200), (255, 255, 255), 2)
+        return frame
 
-        visual_agent = VisualAgent(width=width, height=height)
+    def draw_particles(self, frame: np.ndarray, t: float, beat_strength: float) -> np.ndarray:
+        for i in range(34):
+            angle = t * (0.8 + i * 0.04) + i * 0.8
+            x = int(self.width / 2 + math.cos(angle) * (180 + i * 8))
+            y = int(self.height / 2 + math.sin(angle * 1.5) * (130 + i * 7))
+            radius = int(4 + i % 4)
+            cv2.circle(frame, (x, y), radius, (120, 200, 255), -1)
+        return frame
 
-        codec = cv2.VideoWriter_fourcc(*"mp4v")
-        writer = cv2.VideoWriter(str(output), codec, fps, (width, height))
-
-        if not writer.isOpened():
-            raise RuntimeError("Could not initialize the video writer. Verify OpenCV and FFmpeg installation.")
-
-        avatar_image = None
-        if avatar_path and os.path.exists(avatar_path):
-            avatar_image = cv2.imread(avatar_path, cv2.IMREAD_UNCHANGED)
-            if avatar_image is not None:
-                avatar_image = cv2.cvtColor(avatar_image, cv2.COLOR_RGBA2BGRA) if avatar_image.shape[2] == 4 else avatar_image
-
-        total_frames = int(audio_analysis.duration * fps)
-        if total_frames <= 0:
-            total_frames = max(int(10 * fps), 1)
-
-        for frame_index in range(total_frames):
-            t = frame_index / fps
-            frame = np.zeros((height, width, 3), dtype=np.uint8)
-            frame = visual_agent.draw_frame(frame, t, audio_analysis.beats, avatar_path=avatar_path, bpm=audio_analysis.tempo)
-
-            if avatar_image is not None:
-                avatar_h, avatar_w = avatar_image.shape[:2]
-                scale = min((height * 0.45) / avatar_h, (width * 0.26) / avatar_w)
-                new_w = max(1, int(avatar_w * scale))
-                new_h = max(1, int(avatar_h * scale))
-                resized = cv2.resize(avatar_image, (new_w, new_h), interpolation=cv2.INTER_AREA)
-
-                x = int((width - new_w) / 2)
-                y = int(height * 0.6 - new_h / 2)
-                if resized.shape[2] == 4:
-                    alpha = resized[:, :, 3:4] / 255.0
-                    frame[y : y + new_h, x : x + new_w] = (
-                        alpha * resized[:, :, :3] + (1.0 - alpha) * frame[y : y + new_h, x : x + new_w]
-                    ).astype(np.uint8)
-                else:
-                    frame[y : y + new_h, x : x + new_w] = resized
-
-            writer.write(frame)
-
-        writer.release()
-        return str(output)
+    def draw_text_hint(self, frame: np.ndarray, text: str) -> np.ndarray:
+        cv2.putText(frame, text, (30, 60), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2, cv2.LINE_AA)
+        return frame

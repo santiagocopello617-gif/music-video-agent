@@ -1,6 +1,49 @@
-librosa>=0.10.2
-numpy>=1.26.0
-opencv-python>=4.10.0
-Pillow>=10.4.0
-requests>=2.32.0
-moviepy>=1.0.3
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from src.music_video_agent.orchestrator import Orchestrator
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate a beat-synced music video using the 2.0 agent pipeline.")
+    parser.add_argument("--song", type=str, help="Path to a local audio file.")
+    parser.add_argument("--song-url", type=str, help="URL to a remote audio file.")
+    parser.add_argument("--avatar", type=str, help="Optional avatar image path.")
+    parser.add_argument("--output", type=str, default="output/music_video.mp4", help="Output MP4 path.")
+    parser.add_argument("--preset", type=str, default="cinematic", choices=["cinematic", "vertical", "square", "story"], help="Video output preset.")
+    parser.add_argument("--fps", type=int, default=30, help="Frames per second.")
+    parser.add_argument("--width", type=int, default=1280, help="Override output width.")
+    parser.add_argument("--height", type=int, default=720, help="Override output height.")
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+
+    if not args.song and not args.song_url:
+        print("You must provide either --song or --song-url.")
+        return 1
+
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    orchestrator = Orchestrator()
+    orchestrator.run(
+        song_path=args.song,
+        song_url=args.song_url,
+        avatar_path=args.avatar,
+        output_path=str(output_path),
+        fps=args.fps,
+        width=args.width,
+        height=args.height,
+        preset_name=args.preset,
+    )
+
+    print(f"Video created at: {output_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
